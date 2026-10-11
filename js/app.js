@@ -48,6 +48,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Watch for MindAR camera feed video injection
+  const container = document.getElementById('example-container');
+  if (container) {
+    const observer = new MutationObserver(() => {
+      const camVideo = container.querySelector('video');
+      if (camVideo) {
+        camVideo.setAttribute('playsinline', '');
+        camVideo.setAttribute('webkit-playsinline', '');
+        camVideo.setAttribute('autoplay', '');
+        const p = camVideo.play();
+        if (p !== undefined) {
+          p.catch(e => console.log('Camera video autoplay notice:', e));
+        }
+      }
+    });
+    observer.observe(container, { childList: true });
+  }
+
   // Start AR Function
   const startARSystem = async () => {
     try {
