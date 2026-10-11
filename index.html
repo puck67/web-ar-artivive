@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Artivive WebAR - Quét Tranh Phát Video</title>
+
+  <!-- A-Frame 1.5.0 -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- MindAR Image A-Frame 1.2.5 -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- Splash / Start Screen -->
+  <div id="splash-screen" class="splash-screen">
+    <div class="splash-content">
+      <div class="logo-badge">✦ WebAR Artivive</div>
+      <h1 class="splash-title">Trải nghiệm Nghệ thuật AR</h1>
+      <p class="splash-desc">
+        Hướng camera điện thoại vào một trong các bức tranh mục tiêu để thưởng thức video sống động bám theo bề mặt tranh.
+      </p>
+
+      <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 24px;">
+        <img src="./assets/targets/target0.jpg" style="width: 54px; height: 54px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+        <img src="./assets/targets/target1.jpg" style="width: 54px; height: 54px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+        <img src="./assets/targets/target2.jpg" style="width: 54px; height: 54px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+        <img src="./assets/targets/target3.jpg" style="width: 54px; height: 54px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+      </div>
+
+      <button id="start-btn" class="start-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        Bắt đầu trải nghiệm AR
+      </button>
+    </div>
+  </div>
+
+  <!-- In-AR HUD Layer -->
+  <div class="ui-layer">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="status-badge">
+        <div id="status-dot" class="status-dot"></div>
+        <span id="status-text">Đang quét tìm tranh...</span>
+      </div>
+
+      <button id="mute-btn" class="icon-btn" title="Bật/Tắt âm thanh">
+        <span id="mute-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <!-- Center Viewfinder -->
+    <div id="viewfinder" class="viewfinder-wrap">
+      <div class="reticle">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="laser"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <button id="gallery-btn" class="gallery-toggle-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        Xem 4 tranh mẫu để quét
+      </button>
+    </div>
+  </div>
+
+  <!-- Gallery Drawer Modal -->
+  <div id="gallery-modal" class="gallery-modal">
+    <div class="gallery-header">
+      <h3 style="font-size: 18px; font-weight: 600;">Danh sách 4 bức tranh mục tiêu</h3>
+      <button id="close-gallery-btn" class="icon-btn" style="width: 36px; height: 36px;">✕</button>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-item">
+        <img src="./assets/targets/target0.jpg" alt="Tranh 1">
+        <span>Tranh #1 (Vuông)</span>
+      </div>
+      <div class="gallery-item">
+        <img src="./assets/targets/target1.jpg" alt="Tranh 2">
+        <span>Tranh #2 (Vuông)</span>
+      </div>
+      <div class="gallery-item">
+        <img src="./assets/targets/target2.jpg" alt="Tranh 3">
+        <span>Tranh #3 (Dọc)</span>
+      </div>
+      <div class="gallery-item">
+        <img src="./assets/targets/target3.jpg" alt="Tranh 4">
+        <span>Tranh #4 (Dọc)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D AR Scene -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <!-- Video Assets -->
+    <a-assets>
+      <video id="video0" src="./assets/videos/video0.mp4" preload="auto" playsinline webkit-playsinline loop></video>
+      <video id="video1" src="./assets/videos/video1.mp4" preload="auto" playsinline webkit-playsinline loop></video>
+      <video id="video2" src="./assets/videos/video2.mp4" preload="auto" playsinline webkit-playsinline loop></video>
+      <video id="video3" src="./assets/videos/video3.mp4" preload="auto" playsinline webkit-playsinline loop></video>
+    </a-assets>
+
+    <!-- AR Camera -->
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Target 0 (Vuông: 1x1) -->
+    <a-entity mindar-image-target="targetIndex: 0" id="target0">
+      <a-plane src="#video0" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+    </a-entity>
+
+    <!-- Target 1 (Vuông: 1x1) -->
+    <a-entity mindar-image-target="targetIndex: 1" id="target1">
+      <a-plane src="#video1" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+    </a-entity>
+
+    <!-- Target 2 (Dọc: 1 x 1.5) -->
+    <a-entity mindar-image-target="targetIndex: 2" id="target2">
+      <a-plane src="#video2" position="0 0 0" height="1.5" width="1" rotation="0 0 0"></a-plane>
+    </a-entity>
+
+    <!-- Target 3 (Dọc: 1 x 1.5) -->
+    <a-entity mindar-image-target="targetIndex: 3" id="target3">
+      <a-plane src="#video3" position="0 0 0" height="1.5" width="1" rotation="0 0 0"></a-plane>
+    </a-entity>
+
+  </a-scene>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>

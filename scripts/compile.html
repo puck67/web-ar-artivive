@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MindAR Compiler</title>
+</head>
+<body>
+  <h1 id="status">Starting...</h1>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      fetch('/log?msg=' + encodeURIComponent('GLOBAL ERROR: ' + msg + ' at ' + url + ':' + line + ':' + col + (err ? ' stack: ' + err.stack : '')));
+    };
+    window.onunhandledrejection = function(e) {
+      fetch('/log?msg=' + encodeURIComponent('UNHANDLED REJECTION: ' + (e.reason ? (e.reason.message || e.reason) : e)));
+    };
+  </script>
+  <script type="module">
+    import { Compiler } from "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js";
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(new Error("Failed to load image " + url));
+        img.src = url;
+      });
+    }
+
+    async function run() {
+      const status = document.getElementById("status");
+      status.innerText = "Loading images...";
+      fetch('/log?msg=' + encodeURIComponent("Loading target images..."));
+      
+      const images = await Promise.all([
+        loadImage("/assets/targets/target0.jpg"),
+        loadImage("/assets/targets/target1.jpg"),
+        loadImage("/assets/targets/target2.jpg"),
+        loadImage("/assets/targets/target3.jpg")
+      ]);
+
+      fetch('/log?msg=' + encodeURIComponent("All 4 images loaded. Starting compilation..."));
+      status.innerText = "Compiling images...";
+
+      const compiler = new Compiler();
+      await compiler.compileImageTargets(images, (progress) => {
+        status.innerText = `Compiling: ${progress.toFixed(1)}%`;
+        fetch('/log?msg=' + encodeURIComponent(`Progress: ${progress.toFixed(1)}%`));
+      });
+
+      fetch('/log?msg=' + encodeURIComponent("Exporting .mind binary buffer..."));
+      const buffer = await compiler.exportData();
+      
+      fetch('/log?msg=' + encodeURIComponent(`Exported buffer size: ${buffer.byteLength} bytes. Sending to server...`));
+      await fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: buffer
+      });
+
+      fetch('/log?msg=' + encodeURIComponent("Successfully saved targets.mind!"));
+      await fetch('/done');
+    }
+
+    run().catch(err => {
+      fetch('/log?msg=' + encodeURIComponent('Error: ' + err.message + ' stack: ' + err.stack));
+    });
+  </script>
+</body>
+</html>
