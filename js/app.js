@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('target3')
   ];
 
-  let isMuted = false;
+  let isMuted = true;
   let activeTargets = new Set();
 
   // Detect in-app browsers (Zalo, Facebook, Messenger)
@@ -64,6 +64,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     observer.observe(container, { childList: true });
+
+    // Resume camera video if page visibility changes or returns from background
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        const camVideo = container.querySelector('video');
+        if (camVideo && camVideo.paused) {
+          camVideo.play().catch(e => console.log('Resume cam video on focus:', e));
+        }
+      }
+    });
   }
 
   // Start AR Function
@@ -108,25 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
   startBtn.addEventListener('click', () => {
     startBtn.disabled = true;
     startBtn.innerText = 'Đang khởi động...';
-
-    // Warm up videos non-blocking to unlock mobile audio
-    videos.forEach(v => {
-      if (v) {
-        try {
-          const playPromise = v.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              v.pause();
-              v.currentTime = 0;
-            }).catch(e => {
-              console.log('Video warmup notice:', e);
-            });
-          }
-        } catch (e) {
-          console.warn('Warmup exception:', e);
-        }
-      }
-    });
 
     // Check if A-Frame scene is already loaded
     if (sceneEl && sceneEl.hasLoaded) {
