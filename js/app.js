@@ -39,27 +39,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (content) content.insertBefore(tip, content.firstChild);
   }
 
-  // Pre-configure videos
+  // Ensure all media videos are strictly paused initially
   videos.forEach(v => {
     if (v) {
+      v.pause();
+      v.currentTime = 0;
       v.muted = isMuted;
       v.setAttribute('playsinline', '');
       v.setAttribute('webkit-playsinline', '');
     }
   });
 
-  // Watch for MindAR camera feed video injection
+  // Watch for MindAR camera feed video injection ONLY (do not touch videos with id)
   const container = document.getElementById('example-container');
   if (container) {
     const observer = new MutationObserver(() => {
-      const camVideo = container.querySelector('video');
-      if (camVideo) {
-        camVideo.setAttribute('playsinline', '');
-        camVideo.setAttribute('webkit-playsinline', '');
-        camVideo.setAttribute('autoplay', '');
-        const p = camVideo.play();
-        if (p !== undefined) {
-          p.catch(e => console.log('Camera video autoplay notice:', e));
+      const allVideos = container.querySelectorAll('video');
+      for (const v of allVideos) {
+        // MindAR camera video has no id attribute or has srcObject
+        if (!v.id || v.srcObject) {
+          v.setAttribute('playsinline', '');
+          v.setAttribute('webkit-playsinline', '');
+          v.setAttribute('autoplay', '');
+          const p = v.play();
+          if (p !== undefined) {
+            p.catch(e => console.log('Cam stream notice:', e));
+          }
         }
       }
     });
@@ -68,9 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Resume camera video if page visibility changes or returns from background
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        const camVideo = container.querySelector('video');
-        if (camVideo && camVideo.paused) {
-          camVideo.play().catch(e => console.log('Resume cam video on focus:', e));
+        const allVideos = container.querySelectorAll('video');
+        for (const v of allVideos) {
+          if ((!v.id || v.srcObject) && v.paused) {
+            v.play().catch(e => console.log('Resume cam video on focus:', e));
+          }
         }
       }
     });
@@ -158,6 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (activeTargetNum) activeTargetNum.innerText = (index + 1);
       if (activeVideoPill) activeVideoPill.classList.remove('hidden');
 
+      // Immediately pause and reset all other videos so they never interfere
+      videos.forEach((v, i) => {
+        if (v && i !== index) {
+          v.pause();
+          v.currentTime = 0;
+        }
+      });
+
       const targetVideo = videos[index];
       if (targetVideo) {
         // Mobile browsers require muted autoplay for WebGL textures
@@ -181,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetVideo = videos[index];
       if (targetVideo) {
         targetVideo.pause();
+        targetVideo.currentTime = 0;
       }
 
       if (activeTargets.size === 0) {
