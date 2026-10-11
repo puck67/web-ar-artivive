@@ -141,6 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const activeVideoPill = document.getElementById('active-video-pill');
+  const activeTargetNum = document.getElementById('active-target-num');
+  const zoomVideoBtn = document.getElementById('zoom-video-btn');
+  const videoOverlay = document.getElementById('video-overlay');
+  const fullscreenVideo = document.getElementById('fullscreen-video');
+  const closeVideoBtn = document.getElementById('close-video-btn');
+
+  let currentActiveIndex = null;
+
   // Target Detection Events
   targetElements.forEach((targetEl, index) => {
     if (!targetEl) return;
@@ -148,15 +157,29 @@ document.addEventListener('DOMContentLoaded', () => {
     targetEl.addEventListener('targetFound', () => {
       console.log(`Target ${index} detected!`);
       activeTargets.add(index);
+      currentActiveIndex = index;
 
       statusText.innerText = `Đã nhận diện tranh #${index + 1}`;
       statusDot.classList.add('active');
       viewfinder.classList.add('detected');
 
+      // Show floating pill
+      if (activeTargetNum) activeTargetNum.innerText = (index + 1);
+      if (activeVideoPill) activeVideoPill.classList.remove('hidden');
+
       const targetVideo = videos[index];
       if (targetVideo) {
+        // Mobile browsers require muted autoplay for WebGL textures
+        targetVideo.muted = isMuted;
         targetVideo.currentTime = 0;
-        targetVideo.play().catch(e => console.error("Error playing video:", e));
+        const p = targetVideo.play();
+        if (p !== undefined) {
+          p.catch(err => {
+            console.warn('Playing muted fallback due to policy:', err);
+            targetVideo.muted = true;
+            targetVideo.play().catch(e => console.error(e));
+          });
+        }
       }
     });
 
@@ -173,9 +196,32 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.innerText = 'Đang quét tìm tranh...';
         statusDot.classList.remove('active');
         viewfinder.classList.remove('detected');
+        if (activeVideoPill) activeVideoPill.classList.add('hidden');
       }
     });
   });
+
+  // Zoom / Fullscreen Video
+  if (zoomVideoBtn && fullscreenVideo && videoOverlay) {
+    zoomVideoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentActiveIndex !== null && videos[currentActiveIndex]) {
+        fullscreenVideo.src = videos[currentActiveIndex].currentSrc || videos[currentActiveIndex].src;
+        fullscreenVideo.currentTime = videos[currentActiveIndex].currentTime || 0;
+        fullscreenVideo.muted = false;
+        videoOverlay.classList.remove('hidden');
+        fullscreenVideo.play().catch(err => console.log(err));
+      }
+    });
+  }
+
+  if (closeVideoBtn && fullscreenVideo && videoOverlay) {
+    closeVideoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fullscreenVideo.pause();
+      videoOverlay.classList.add('hidden');
+    });
+  }
 
   // Mute / Unmute Toggle
   muteBtn.addEventListener('click', () => {
