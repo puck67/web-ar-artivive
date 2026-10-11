@@ -28,7 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMuted = false;
   let activeTargets = new Set();
 
-  // Initialize videos
+  // Detect in-app browsers (Zalo, Facebook, Messenger)
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isInApp = /FBAN|FBAV|Instagram|Line|MicroMessenger|Zalo|BytedanceWebview/i.test(ua);
+  if (isInApp) {
+    const tip = document.createElement('div');
+    tip.style.cssText = 'background:#ef4444;color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.4;';
+    tip.innerHTML = '⚠️ Bạn đang mở trong ứng dụng (Zalo/Facebook). Vui lòng bấm <b>...</b> ở góc trên và chọn <b>"Mở bằng trình duyệt"</b> (Safari/Chrome) để cấp quyền Camera.';
+    const content = document.querySelector('.splash-content');
+    if (content) content.insertBefore(tip, content.firstChild);
+  }
+
+  // Pre-configure videos
   videos.forEach(v => {
     if (v) {
       v.muted = isMuted;
@@ -37,34 +48,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Start AR Experience
-  startBtn.addEventListener('click', async () => {
-    startBtn.disabled = true;
-    startBtn.innerText = 'Đang kích hoạt Camera...';
+  // Start AR Function
+  const startARSystem = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Trình duyệt không hỗ trợ Camera API. Vui lòng mở bằng Safari (iOS) hoặc Chrome (Android).');
+      }
 
-    // Unlock Audio & Video autoplay restriction on Mobile browsers
-    for (const v of videos) {
+      startBtn.innerText = 'Đang mở Camera...';
+
+      const arSystem = sceneEl ? sceneEl.systems['mindar-image-system'] : null;
+      if (!arSystem) {
+        throw new Error('Hệ thống AR chưa sẵn sàng. Vui lòng bấm thử lại.');
+      }
+
+      // Start MindAR
+      await arSystem.start();
+
+      // Successfully started camera -> hide splash
+      splashScreen.classList.add('hidden');
+    } catch (err) {
+      console.error('Error starting AR:', err);
+      let errMsg = 'Không thể truy cập Camera.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errMsg = 'Bạn chưa cấp quyền Camera! Vui lòng vào cài đặt trình duyệt (hoặc icon ổ khóa trên thanh địa chỉ) để Cho phép (Allow) Camera, sau đó tải lại trang.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errMsg = 'Không tìm thấy thiết bị Camera trên máy của bạn.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errMsg = 'Camera đang bị ứng dụng khác chiếm dụng. Vui lòng đóng các ứng dụng khác đang dùng camera và thử lại.';
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+
+      alert(errMsg);
+      startBtn.disabled = false;
+      startBtn.innerText = 'Thử lại';
+    }
+  };
+
+  // Start AR Experience Button Handler
+  startBtn.addEventListener('click', () => {
+    startBtn.disabled = true;
+    startBtn.innerText = 'Đang khởi động...';
+
+    // Warm up videos non-blocking to unlock mobile audio
+    videos.forEach(v => {
       if (v) {
         try {
-          await v.play();
-          v.pause();
-          v.currentTime = 0;
+          const playPromise = v.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              v.pause();
+              v.currentTime = 0;
+            }).catch(e => {
+              console.log('Video warmup notice:', e);
+            });
+          }
         } catch (e) {
-          console.warn('Media play unlock attempt:', e);
+          console.warn('Warmup exception:', e);
         }
       }
-    }
+    });
 
-    // Start MindAR tracking system
-    if (sceneEl) {
-      const arSystem = sceneEl.systems['mindar-image-system'];
-      if (arSystem) {
-        arSystem.start();
-      }
+    // Check if A-Frame scene is already loaded
+    if (sceneEl && sceneEl.hasLoaded) {
+      startARSystem();
+    } else if (sceneEl) {
+      startBtn.innerText = 'Đang tải tài nguyên 3D...';
+      sceneEl.addEventListener('loaded', () => {
+        startARSystem();
+      }, { once: true });
+    } else {
+      startARSystem();
     }
-
-    // Hide Splash Screen
-    splashScreen.classList.add('hidden');
   });
 
   // Target Detection Events
@@ -75,12 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`Target ${index} detected!`);
       activeTargets.add(index);
 
-      // UI state
       statusText.innerText = `Đã nhận diện tranh #${index + 1}`;
       statusDot.classList.add('active');
       viewfinder.classList.add('detected');
 
-      // Play matching video
       const targetVideo = videos[index];
       if (targetVideo) {
         targetVideo.currentTime = 0;
@@ -92,13 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`Target ${index} lost!`);
       activeTargets.delete(index);
 
-      // Pause matching video
       const targetVideo = videos[index];
       if (targetVideo) {
         targetVideo.pause();
       }
 
-      // If no target is currently active
       if (activeTargets.size === 0) {
         statusText.innerText = 'Đang quét tìm tranh...';
         statusDot.classList.remove('active');

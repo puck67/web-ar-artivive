@@ -112,18 +112,18 @@
 
   <!-- 3D AR Scene -->
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
     <!-- Video Assets -->
-    <a-assets>
-      <video id="video0" src="./assets/videos/video0.mp4" preload="auto" playsinline webkit-playsinline loop></video>
-      <video id="video1" src="./assets/videos/video1.mp4" preload="auto" playsinline webkit-playsinline loop></video>
-      <video id="video2" src="./assets/videos/video2.mp4" preload="auto" playsinline webkit-playsinline loop></video>
-      <video id="video3" src="./assets/videos/video3.mp4" preload="auto" playsinline webkit-playsinline loop></video>
+    <a-assets timeout="10000">
+      <video id="video0" src="./assets/videos/video0.mp4" preload="metadata" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
+      <video id="video1" src="./assets/videos/video1.mp4" preload="metadata" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
+      <video id="video2" src="./assets/videos/video2.mp4" preload="metadata" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
+      <video id="video3" src="./assets/videos/video3.mp4" preload="metadata" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
     </a-assets>
 
     <!-- AR Camera -->
